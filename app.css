@@ -1,3 +1,67 @@
 .app {
-     /* Add app styles here */
+     padding: 10px;
 }
+
+.app .leftSide {
+	float: left;
+	width: 50%;
+}
+
+.app .leftSide .titleText {
+	font-size: 20px;
+	border-bottom: 1px solid #AAA;
+	margin-bottom: 10px;
+}
+
+.app .leftSide .subTitleText {
+	font-size: 14px;
+	margin: 4px 0;
+	float: left;
+}
+
+.app .leftSide .capabilityGroups {
+	margin: 8px 0;
+	padding: 5px;
+	height: 150px;
+	border: 2px inset #AAA;
+	overflow: auto;
+}
+
+.app .leftSide .capabilityGroup {
+}
+
+.app .leftSide .capabilityGroupOwner {
+	float: left;
+	margin-top: 5px;
+	margin-right: 10px;
+}
+
+.app .leftSide .capabilityGroupName {
+	float: left;
+	margin-top: 5px;
+}
+
+.app .leftSide .deleteCapabilityGroup {
+	float: left;
+	color: #888;
+	font-weight: bold;
+}
+
+.app .leftSide .capabilityGroupCombobox {
+	float: left;
+	margin-right: 10px;
+	margin-top: 2px;
+}
+
+.app .leftSide .saveText {
+	float: left;
+	color: #777;
+	font-size: 14px;
+	margin: 4px 5px;
+}
+
+.app .rightSide {
+	float: left;
+	width: 50%;
+}
+

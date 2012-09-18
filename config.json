@@ -3,7 +3,8 @@
     "className": "CapabilityGroupManagerApp",
     "sdk": "2.0p3",
     "javascript": [
-        "App.js"
+        "App.js",
+        "CapabilityGroupCombobox.js"
     ],
     "css": [
         "app.css"
