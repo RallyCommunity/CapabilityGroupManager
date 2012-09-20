@@ -362,6 +362,8 @@ Ext.define('CapabilityGroupManagerApp', {
                         ui: 'link',
                         cls: 'deleteCapabilityGroup',
                         html: 'X',
+                        tooltip: 'Remove',
+                        tooltipType: 'title',
                         listeners: {
                             click: function() {
                                 this.removeCapabilityGroup(capabilityGroup.ref);
