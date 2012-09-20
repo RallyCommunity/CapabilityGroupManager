@@ -16,7 +16,6 @@
 .app .leftSide .subTitleText {
 	font-size: 14px;
 	margin: 4px 0;
-	float: left;
 }
 
 .app .leftSide .capabilityGroups {
@@ -36,21 +35,42 @@
 	margin-right: 10px;
 }
 
+.app .leftSide .ownerCheckbox {
+	float: left;
+	margin-right: 5px;
+}
+
 .app .leftSide .capabilityGroupName {
 	float: left;
 	margin-top: 5px;
+}
+
+.app .leftSide .ownerText {
+	float: left;
+	color: #777;
+	margin-top: 5px;
+	visibility: hidden;
+}
+
+.app .leftSide .x-form-cb-checked ~ .ownerText {
+	visibility: visible !important;
 }
 
 .app .leftSide .deleteCapabilityGroup {
 	float: left;
 	color: #888;
 	font-weight: bold;
+	padding: 2px 0 0 0;
 }
 
 .app .leftSide .capabilityGroupCombobox {
 	float: left;
 	margin-right: 10px;
 	margin-top: 2px;
+}
+
+.app .leftSide .addButton {
+	float: left;
 }
 
 .app .leftSide .saveText {
