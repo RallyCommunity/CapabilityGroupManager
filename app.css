@@ -107,3 +107,28 @@
 	clear: both;
 }
 
+.app .rightSide .pill {
+	overflow: auto;
+}
+
+.app .rightSide .textContent {
+	float: left;
+	margin-right: 0;
+}
+
+.app .rightSide .pill .rightSide {
+	float: right;
+}
+
+.app .rightSide .pill .rightSide .row-project {
+	float: right;
+}
+
+.app .rightSide .pill .percentDoneContainer {
+	float: right;
+	position: relative;
+	margin-right: 10px;
+	right: 0;
+	top: 0;
+}
+

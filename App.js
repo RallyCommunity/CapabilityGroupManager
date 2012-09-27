@@ -3,6 +3,8 @@ Ext.define('CapabilityGroupManagerApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
+    orderIndexForPulledFeatures: 3, // FIXME - ask Jeff
+
     customFields: {
         Names: 'CapabilityGroups',
         Refs: 'CapabilityGroupRefs',
@@ -71,7 +73,7 @@ Ext.define('CapabilityGroupManagerApp', {
                             cls: 'addButton',
                             disabled: true,
                             text: 'Add',
-                            handler: this.addCapabiltiyGroup,
+                            handler: this.addCapabilityGroup,
                             scope: this
                         },
                         {
@@ -154,7 +156,7 @@ Ext.define('CapabilityGroupManagerApp', {
         }
     },
 
-    addCapabiltiyGroup: function(){
+    addCapabilityGroup: function(){
         var dropdown = Ext.ComponentQuery.query('#capabilityGroupCombobox')[0];
         var value = dropdown.getValue();
 
@@ -182,12 +184,12 @@ Ext.define('CapabilityGroupManagerApp', {
             }, function() {
                 Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
                 this.drawTree();
+                this._enableOrDisablePullStoriesButton();
                 this.setLoading(false);
             }, this);
 
         }, this);
         this.drawCapabilityGroups();
-
     },
 
 
@@ -213,6 +215,7 @@ Ext.define('CapabilityGroupManagerApp', {
             }, function() {
                 Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
                 this.drawTree();
+                this._enableOrDisablePullStoriesButton();
                 this.setLoading(false);
             }, this);
 
@@ -330,7 +333,7 @@ Ext.define('CapabilityGroupManagerApp', {
         //record not guaranteed to be fully hydrated, need to get the full object.
         this.record.self.load(this.record.get('ObjectID'), {
             success: this.onRecordLoaded,
-            fetch: ['ObjectID', 'State','OrderIndex','TypeDef', 'Name', 'FormattedID', 'MVFOwner', 'MVFOwnerRef', 'CapabilityGroups', 'CapabilityGroupRefs'],
+            fetch: ['Project', 'ObjectID', 'State', 'State.TypeDef', 'OrderIndex','TypeDef', 'Name', 'FormattedID', 'MVFOwner', 'MVFOwnerRef', 'CapabilityGroups', 'CapabilityGroupRefs'],
             scope: this
         });
 
@@ -338,6 +341,7 @@ Ext.define('CapabilityGroupManagerApp', {
 
     onRecordLoaded: function(record){
         this.record = record;
+        this.featureStateTypeDef = record.get('State').TypeDef._ref;
         this.updateTitle();
         this.drawCapabilityGroups();
 
@@ -348,7 +352,7 @@ Ext.define('CapabilityGroupManagerApp', {
 
         this.drawTree();
         Ext.ComponentQuery.query('#addButton')[0].enable();
-        Ext.ComponentQuery.query('#pullButton')[0].enable();
+        this._enableOrDisablePullStoriesButton();
     },
 
     updateTitle: function() {
@@ -384,7 +388,10 @@ Ext.define('CapabilityGroupManagerApp', {
         }
         this.savePending = Ext.defer(function(){
             this.savePending = false;
-            this.record.save();
+            this.record.save({
+                callback: this._enableOrDisablePullStoriesButton,
+                scope: this
+            });
         }, 1, this);
     },
 
@@ -412,7 +419,7 @@ Ext.define('CapabilityGroupManagerApp', {
                 context: {
                     project: this.record.get('Project')._ref
                 },
-                fetch: ['Name', 'DirectChildrenCount', 'FormattedID', 'ObjectID']
+                fetch: ['Name', 'DirectChildrenCount', 'FormattedID', 'ObjectID', 'Project']
             },
             childItemsStoreConfigForParentRecordFn: function(){
                 return {
@@ -421,6 +428,11 @@ Ext.define('CapabilityGroupManagerApp', {
             },
             canExpandFn: function(record){
                 return record.get('DirectChildrenCount') > 0;
+            },
+            treeItemConfigForRecordFn: function(){
+                return {
+                    xtype: 'gettytreeitem'
+                };
             },
             listeners: {
                 toplevelload: function() {
@@ -494,28 +506,25 @@ Ext.define('CapabilityGroupManagerApp', {
 
 
     pullFeature: function(){
-        // Create a child user story in each capability group (project)
         Ext.ComponentQuery.query('#pullButton')[0].disable();
         Ext.ComponentQuery.query('#pullText')[0].addCls('pullTextVisible');
+
         this.pullChildStories(function(stories){
-            this.saveAll(stories, function(){
-                Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
-                this.drawTree();
-                Ext.ComponentQuery.query('#pullButton')[0].enable();
-                Ext.ComponentQuery.query('#pullText')[0].removeCls('pullTextVisible');
+            this.moveMVFToDev(function(){
+                this.saveAll(stories, function(){
+                    Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
+                    this.drawTree();
+                    this._enableOrDisablePullStoriesButton();
+                    Ext.ComponentQuery.query('#pullText')[0].removeCls('pullTextVisible');
+                }, this);
             }, this);
         }, this);
-
-        // Change the project of the MVF (portfolioitem/feature) to the Owner Capability group (project)
-        // Move the MVF to the next state
-        this.moveMVFToDev();
     },
 
     pullChildStories: function(callback, scope) {
         Rally.data.ModelFactory.getModel({
             type: 'Userstory',
             success: function(UserStory) {
-
                 // Load child stories
                 var store = Ext.create('Rally.data.WsapiDataStore', {
                     autoLoad: true,
@@ -533,7 +542,6 @@ Ext.define('CapabilityGroupManagerApp', {
                     },
                     listeners: {
                         load: function(store, records) {
-
                             records = Ext.Array.clone(records);
                             capabilityGroups = this.parseCapabilityGroups();
 
@@ -584,33 +592,39 @@ Ext.define('CapabilityGroupManagerApp', {
         saveOne();
     },
 
-    moveMVFToDev: function() {
+    moveMVFToDev: function(callback, scope) {
         var ownerRef = this.record.get('MVFOwnerRef');
         if (ownerRef) {
             this.record.set({
                 Project: ownerRef
             });
         }
-        var state = this.record.get('State');
-        if(state && state.TypeDef && state.TypeDef._ref) {
+        if(this.featureStateTypeDef) {
             Ext.create('Rally.data.WsapiDataStore', {
                 autoLoad: true,
                 model: 'State',
                 filters: [
                     {
                         property: 'TypeDef',
-                        value: state.TypeDef._ref
+                        value: this.featureStateTypeDef
                     },
                     {
                         property: 'OrderIndex',
-                        value: state.OrderIndex + 1
+                        value: this.orderIndexForPulledFeatures
                     }
                 ],
                 listeners: {
                     load: function(store, records){
                         if(records.length > 0) {
                             this.record.set('State', records[0].get('_ref'));
-                            this.record.save();
+                            this.record.save({
+                                callback: function(){
+                                    if(callback){
+                                        callback.call(scope || this);
+                                    }
+                                },
+                                scope: scope
+                            });
                         }
                     },
                     scope: this
@@ -671,13 +685,75 @@ Ext.define('CapabilityGroupManagerApp', {
                 scope: this
             }
         });
+    },
+
+    _enableOrDisablePullStoriesButton: function() {
+
+        var pullButton = Ext.ComponentQuery.query('#pullButton')[0];
+
+        var mvfOwnerRef = this.record.get('MVFOwnerRef');
+        if(!mvfOwnerRef || (mvfOwnerRef && this.record.get('Project')._ref === mvfOwnerRef)) {
+            Rally.data.ModelFactory.getModel({
+                type: 'Userstory',
+                success: function(UserStory) {
+                    // Load child stories
+                    var store = Ext.create('Rally.data.WsapiDataStore', {
+                        autoLoad: true,
+                        limit: Infinity,
+                        model: 'User Story',
+                        filters: [
+                            {
+                                property: 'PortfolioItem',
+                                value: this.record.get('_ref')
+                            }
+                        ],
+                        context: {
+                            project: null
+                        },
+                        listeners: {
+                            load: function(store, records) {
+                                records = Ext.Array.clone(records);
+                                capabilityGroups = this.parseCapabilityGroups();
+
+                                var allChildrenInCapabilityGroupProject = true;
+                                Ext.Array.each(records, function(record){
+                                    var projectRef = record.get('Project')._ref;
+                                    var name = record.get('Name');
+
+                                    Ext.Array.each(capabilityGroups, function(capabilityGroup){
+                                        if(name === this._userStoryNameFor(capabilityGroup) && projectRef !== capabilityGroup.ref) {
+                                            allChildrenInCapabilityGroupProject = false;
+                                        }
+                                    }, this);
+                                },this);
+
+                                if(allChildrenInCapabilityGroupProject) {
+                                    pullButton.setText('No changes');
+                                    pullButton.disable();
+                                } else {
+                                    pullButton.setText('Pull stories from MVF');
+                                    pullButton.enable();
+                                }
+
+                            },
+                            scope: this
+                        }
+                    });
+                },
+                scope: this
+            });
+        } else {
+            pullButton.setText('Pull stories from MVF');
+            pullButton.enable();
+        }
+        
     }
 
 
 
 }, function(){
     if (!Rally.Message.objectFocus){
-        Rally.Message.objectFocus = "objectfocus"; // HACK
+        Rally.Message.objectFocus = "objectfocus"; // hack to get it to run externally
     }
 }); 
 

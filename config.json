@@ -4,7 +4,8 @@
     "sdk": "2.0p3",
     "javascript": [
         "App.js",
-        "CapabilityGroupCombobox.js"
+        "CapabilityGroupCombobox.js",
+        "GettyTreeItem.js"
     ],
     "css": [
         "app.css"
