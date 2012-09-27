@@ -5,7 +5,9 @@
     "javascript": [
         "App.js",
         "CapabilityGroupCombobox.js",
-        "GettyTreeItem.js"
+        "GettyTreeItem.js",
+        "CapabilityGroupEditor.js",
+        "MVFTree.js"
     ],
     "css": [
         "app.css"

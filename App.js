@@ -14,239 +14,34 @@ Ext.define('CapabilityGroupManagerApp', {
         messageable: 'Rally.Messageable'
     },
 
-    launch: function() {
-        this.numRequests = 0;
-
-        this.buildBanner();
-        this.buildLeftSide();
-        this.buildRightSide();
-        this.subscribeToEvents();
-    },
-
-    buildBanner :function() {
-        this.add({
+    items: [
+        {
             xtype: 'component',
             autoEl: 'h1',
             cls: 'titleText',
             itemId: 'titleText',
             html: 'Please select a MVF from a kanban or grid and it will show here'
-        });
-    },
-
-    buildLeftSide: function() {
-        this.add({
-            xtype: 'container',
-            cls: 'leftSide',
-            items: [
-                {
-                    xtype: 'component',
-                    autoEl: 'h2',
-                    cls: 'subTitleText',
-                    itemId: 'subTitleText',
-                    html: 'Capability Groups:'
-                },
-                {
-                    xtype: 'container',
-                    cls: 'capabilityGroups',
-                    itemId: 'capabilityGroups',
-                    html: ''
-                },
-                {
-                    xtype: 'container',
-                    items: [
-                        {
-                            xtype: 'capabilitygroupcombobox',
-                            fieldLabel: '',
-                            itemId: 'capabilityGroupCombobox',
-                            cls: 'capabilityGroupCombobox',
-                            labelWidth: 0,
-                            storeConfig: {
-                                listeners: {
-                                    load: this.onStoreDataLoaded,
-                                    scope: this
-                                }
-                            }
-                        },
-                        {
-                            xtype: 'button',
-                            itemId: 'addButton',
-                            cls: 'addButton',
-                            disabled: true,
-                            text: 'Add',
-                            handler: this.addCapabilityGroup,
-                            scope: this
-                        },
-                        {
-                            xtype: 'component',
-                            cls: 'saveText',
-                            itemId: 'saveText'
-                        }
-                    ]
-                }
-            ]
-        });
-    },
-
-    onStoreDataLoaded: function(){
-        this.storeDataLoaded = true;
-        this.loadRecord();
-    },
-
-    parseCapabilityGroups: function(){
-        var dropdown = Ext.ComponentQuery.query('#capabilityGroupCombobox')[0];
-        var capabilityGroups = this.record.get('CapabilityGroupRefs');
-        var refs = capabilityGroups && capabilityGroups.split(',') || [];
-        var newRefs = [];
-
-        Ext.Array.each(refs, function(ref){
-            if(dropdown && dropdown.store) {
-                var record = dropdown.store.getById(Rally.util.Ref.getOidFromRef(ref));
-                if (record) {
-                    newRefs.push({
-                        ref: ref,
-                        name: record.get('Name')
-                    });
-                }
-            }
-        });
-
-        return newRefs;
-    },
-
-    saveCapabilityGroups: function(refs, callback, scope){
-        this.setLoading(true);
-        this.record.set('CapabilityGroupRefs', Ext.Array.map(refs, function(ref){
-            return ref.ref;
-        }).join(','));
-        this.record.set('CapabilityGroups', Ext.Array.map(refs, function(ref){
-            return ref.name;
-        }).join(', '));
-
-        this.showSaveText();
-        this.record.save({
-            callback: function() {
-                this.hideSaveText();
-                callback.call(scope || this);
-            },
-            scope: this
-        });
-    },
-
-    showSaveText: function() {
-        this.numRequests++;
-        this.setSaveMessage('Saving...');
-    },
-
-    hideSaveText: function() {
-        this.numRequests--;
-        if(this.numRequests <= 0) {
-            this.setSaveMessage('Saved');
         }
+    ],
+
+    launch: function() {
+        this.numRequests = 0;
+
+        this._loadNeededData();
+        this.buildUI();
+        this.subscribeToEvents();
     },
 
-    setSaveMessage: function(msg){
-        Ext.ComponentQuery.query('#saveText')[0].getEl().setHTML(msg);
-    },
-
-    _userStoryNameFor: function(capabilityGroup) {
-        if(capabilityGroup.get) {
-            return this.record.get('Name') + ' - ' + capabilityGroup.get('Name');
-        } else {
-            return this.record.get('Name') + ' - ' + capabilityGroup.name;
-        }
-    },
-
-    addCapabilityGroup: function(){
-        var dropdown = Ext.ComponentQuery.query('#capabilityGroupCombobox')[0];
-        var value = dropdown.getValue();
-
-        var refs = this.parseCapabilityGroups();
-
-        var isDuplicate = Ext.Array.some(refs, function(ref){
-            return ref.ref == value;
-        });
-        if (isDuplicate) {
-            return;
-        }
-
-        var record = dropdown.store.getById(Rally.util.Ref.getOidFromRef(value));
-        refs.push({
-            ref: value,
-            name: record.get('Name')
-        });
-
-        this.saveCapabilityGroups(refs, function(){
-
-            this._createUserStory({
-                Name: this._userStoryNameFor(record),
-                PortfolioItem: this.record.get('_ref'),
-                Project: this.record.get('Project')._ref
-            }, function() {
-                Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
-                this.drawTree();
-                this._enableOrDisablePullStoriesButton();
-                this.setLoading(false);
-            }, this);
-
+    subscribeToEvents: function(){
+        this.subscribe(Rally.Message.objectFocus, function(record){
+            this.record = record;
+            this.loadRecord();
         }, this);
-        this.drawCapabilityGroups();
-    },
 
-
-    removeCapabilityGroup: function(removeRef){
-        if(this.record && this.record.get('MVFOwnerRef') === removeRef) {
-            this.setOwner(null);
-        }
-
-        var dropdown = Ext.ComponentQuery.query('#capabilityGroupCombobox')[0];
-        var capabilityGroupToRemove = dropdown.store.getById(Rally.util.Ref.getOidFromRef(removeRef));
-
-        var refs = this.parseCapabilityGroups();
-
-        refs = Ext.Array.filter(refs, function(ref){
-            return ref.ref !== removeRef;
-        });
-
-        this.saveCapabilityGroups(refs, function(){
-
-            this._removeUserStory({
-                Name: this._userStoryNameFor(capabilityGroupToRemove),
-                PortfolioItem: this.record.get('_ref')
-            }, function() {
-                Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
-                this.drawTree();
-                this._enableOrDisablePullStoriesButton();
-                this.setLoading(false);
-            }, this);
-
-        }, this);
-        this.drawCapabilityGroups();
-
-    },
-
-    buildRightSide: function() {
-        this.add({
-            xtype: 'container',
-            itemId: 'rightSide',
-            cls: 'rightSide',
-            items: [
-                {
-                    xtype: 'rallybutton',
-                    itemId: 'pullButton',
-                    cls: 'pullButton',
-                    disabled: true,
-                    text: 'Pull stories from MVF',
-                    handler: this.pullFeature,
-                    scope: this
-                },
-                {
-                    xtype: 'component',
-                    itemId: 'pullText',
-                    cls: 'pullText',
-                    html: 'Moving stories to the right project...'
-                }
-            ]
-        });
+        this.capabilityGroupEditor.on('addCapabilityGroup', this.addCapabilityGroup, this);
+        this.capabilityGroupEditor.on('removeCapabilityGroup', this.removeCapabilityGroup, this);
+        this.capabilityGroupEditor.on('mvfOwnerChange', this._onMVFOwnerChange, this);
+        this.mvfTree.on('pullButtonClicked', this.pullFeature, this);
     },
 
     loadDummyRecordForTesting: function(){
@@ -286,11 +81,30 @@ Ext.define('CapabilityGroupManagerApp', {
         
     },
 
-    subscribeToEvents: function(){
-        this.subscribe(Rally.Message.objectFocus, function(record){
-            this.record = record;
-            this.loadRecord();
-        }, this);
+    _loadNeededData: function() {
+
+        // TODO - remove this:
+        this.loadDummyRecordForTesting();
+
+        Ext.create('Rally.data.WsapiDataStore', {
+            autoLoad: true,
+            model: 'Project',
+            filters: [
+                {
+                    property: 'Name',
+                    operator: 'Contains',
+                    value: 'MVF Backlog'
+                }
+            ],
+            listeners: {
+                load: function(store, records){
+                    this.capabilityGroupStore = store;
+                    this.loadRecord();
+                },
+                scope: this
+            }
+        });
+
 
         Ext.create('Rally.data.WsapiDataStore', {
             autoLoad: true,
@@ -307,13 +121,13 @@ Ext.define('CapabilityGroupManagerApp', {
             ],
             listeners: {
                 load: function(store, records){
+                    this.featureStateTypeDef = records[0].get('_ref');
+                    
                     Rally.data.ModelFactory.getModel({
                         type: records[0].get('TypePath'),
                         success: function(model){
                             this.lowestType = model;
-
-                            // TODO - remove this:
-                            this.loadDummyRecordForTesting();
+                            this.loadRecord();
                         },
                         scope: this
                     });
@@ -324,16 +138,16 @@ Ext.define('CapabilityGroupManagerApp', {
     },
 
     loadRecord: function(){
-        this.setSaveMessage('')
+        this.setSaveMessage('');
         
-        if(!this.storeDataLoaded || !this.record || !this.lowestType || this.lowestType.typePath !== this.record.self.typePath) {
+        if(!this.capabilityGroupStore || !this.record || !this.lowestType || this.lowestType.typePath !== this.record.self.typePath) {
             return;
         }
 
         //record not guaranteed to be fully hydrated, need to get the full object.
         this.record.self.load(this.record.get('ObjectID'), {
             success: this.onRecordLoaded,
-            fetch: ['Project', 'ObjectID', 'State', 'State.TypeDef', 'OrderIndex','TypeDef', 'Name', 'FormattedID', 'MVFOwner', 'MVFOwnerRef', 'CapabilityGroups', 'CapabilityGroupRefs'],
+            fetch: ['Project', 'ObjectID', 'State', 'OrderIndex','TypeDef', 'Name', 'FormattedID', 'MVFOwner', 'MVFOwnerRef', 'CapabilityGroups', 'CapabilityGroupRefs'],
             scope: this
         });
 
@@ -341,181 +155,184 @@ Ext.define('CapabilityGroupManagerApp', {
 
     onRecordLoaded: function(record){
         this.record = record;
-        this.featureStateTypeDef = record.get('State').TypeDef._ref;
         this.updateTitle();
         this.drawCapabilityGroups();
 
-        var tree = Ext.ComponentQuery.query('#capabilityGroupTree');
-        if(tree && tree.length > 0) {
-            tree[0].destroy();
-        }
-
-        this.drawTree();
+        this.mvfTree.redrawTree(this.record);
         Ext.ComponentQuery.query('#addButton')[0].enable();
         this._enableOrDisablePullStoriesButton();
     },
 
-    updateTitle: function() {
-        var record = this.record;
-
-        Ext.ComponentQuery.query('#titleText')[0].getEl().setHTML(record.get('FormattedID') + ' : ' + record.get('Name'));
-    },
-
-    setOwner: function(owner) {
-
-        var newOwnerCheckbox;
-        Ext.Array.each(Ext.ComponentQuery.query('checkbox'), function(checkbox) {
-            var isOwner = owner && checkbox.data === owner.ref;
-            if (isOwner) {
-                newOwnerCheckbox = checkbox;
-            } else {
-                checkbox.setValue(false);
-            }
+    buildUI: function() {
+        this.capabilityGroupEditor = this.add({
+            xtype: 'capabilitygroupeditor',
+            cls: 'leftSide'
         });
-        if(newOwnerCheckbox) {
-            if(newOwnerCheckbox.getValue() === false) {
-                newOwnerCheckbox.setValue(true);
+
+        this.mvfTree = this.add({
+            xtype: 'mvftree',
+            cls: 'rightSide'
+        });
+    },
+
+    parseCapabilityGroups: function(){
+        var capabilityGroups = this.record.get('CapabilityGroupRefs');
+        var refs = capabilityGroups && capabilityGroups.split(',') || [];
+        var newRefs = [];
+
+        Ext.Array.each(refs, function(ref){
+            var record = this.capabilityGroupStore.getById(Rally.util.Ref.getOidFromRef(ref));
+            if (record) {
+                newRefs.push({
+                    ref: ref,
+                    name: record.get('Name')
+                });
             }
-        }
+        }, this);
 
-        this.record.set('MVFOwner', owner && owner.name || '');
-        this.record.set('MVFOwnerRef', owner && owner.ref || '');
+        return newRefs;
     },
 
-    delayedSave: function() {
-        if (this.savePending){
-            return;
-        }
-        this.savePending = Ext.defer(function(){
-            this.savePending = false;
-            this.record.save({
-                callback: this._enableOrDisablePullStoriesButton,
-                scope: this
-            });
-        }, 1, this);
-    },
+    saveCapabilityGroups: function(refs, callback, scope){
+        this.setLoading(true);
+        this.record.set('CapabilityGroupRefs', Ext.Array.map(refs, function(ref){
+            return ref.ref;
+        }).join(','));
+        this.record.set('CapabilityGroups', Ext.Array.map(refs, function(ref){
+            return ref.name;
+        }).join(', '));
 
-    _onCheckboxChange: function(capabilityGroup, isChecked) {
-        this.setOwner(isChecked ? capabilityGroup : null);
-        this.delayedSave();
-    },
-
-    drawTree: function() {
-        Ext.ComponentQuery.query('#rightSide')[0].add({
-            xtype: 'rallytree',
-            cls: 'capabilityGroupTree',
-            itemId: 'capabilityGroupTree',
-            topLevelModel: this.record.self.typePath,
-            parentAttributeForChildRecordFn: function() {
-                return 'PortfolioItem';
-            },
-            topLevelStoreConfig: {
-                filters: [
-                    {
-                        property: 'ObjectID',
-                        value: this.record.get('ObjectID')
-                    }
-                ],
-                context: {
-                    project: this.record.get('Project')._ref
-                },
-                fetch: ['Name', 'DirectChildrenCount', 'FormattedID', 'ObjectID', 'Project']
-            },
-            childItemsStoreConfigForParentRecordFn: function(){
-                return {
-                    sorters: []
-                };
-            },
-            canExpandFn: function(record){
-                return record.get('DirectChildrenCount') > 0;
-            },
-            treeItemConfigForRecordFn: function(){
-                return {
-                    xtype: 'gettytreeitem'
-                };
-            },
-            listeners: {
-                toplevelload: function() {
-                    var treeItem = Ext.ComponentQuery.query('#capabilityGroupTree rallytreeitem')[0];
-                    Ext.ComponentQuery.query('#capabilityGroupTree')[0].expandItem(treeItem);
-                    treeItem.setExpanded(true);
-                    treeItem.draw();
-                },
-                scope: this
+        this.showSaveText();
+        this.record.save({
+            callback: function() {
+                this.hideSaveText();
+                callback.call(scope || this);
             },
             scope: this
         });
     },
 
-    drawCapabilityGroups: function() {
+    showSaveText: function() {
+        this.numRequests++;
+        this.setSaveMessage('Saving...');
+    },
 
-        var capabilityGroupsComponent = Ext.ComponentQuery.query('#capabilityGroups')[0];
-        capabilityGroupsComponent.removeAll();
+    hideSaveText: function() {
+        this.numRequests--;
+        if(this.numRequests <= 0) {
+            this.setSaveMessage('Saved');
+        }
+    },
 
-        var capabilityGroups = this.parseCapabilityGroups();
-        if(capabilityGroups.length <= 0) {
+    setSaveMessage: function(msg){
+        this.capabilityGroupEditor.setSaveMessage(msg);
+    },
+
+    _userStoryNameFor: function(capabilityGroup) {
+        if(capabilityGroup.get) {
+            return this.record.get('Name') + ' - ' + capabilityGroup.get('Name');
+        } else {
+            return this.record.get('Name') + ' - ' + capabilityGroup.name;
+        }
+    },
+
+    addCapabilityGroup: function(value){
+        var refs = this.parseCapabilityGroups();
+
+        var isDuplicate = Ext.Array.some(refs, function(ref){
+            return ref.ref == value;
+        });
+        if (isDuplicate) {
             return;
         }
 
+        var record = this.capabilityGroupStore.getById(Rally.util.Ref.getOidFromRef(value));
+        refs.push({
+            ref: value,
+            name: record.get('Name')
+        });
+
+        this.saveCapabilityGroups(refs, function(){
+
+            this._createUserStory({
+                Name: this._userStoryNameFor(record),
+                PortfolioItem: this.record.get('_ref'),
+                Project: this.record.get('Project')._ref
+            }, function() {
+                this.mvfTree.redrawTree(this.record);
+                this._enableOrDisablePullStoriesButton();
+                this.setLoading(false);
+            }, this);
+
+        }, this);
+        this.drawCapabilityGroups();
+    },
+
+
+    removeCapabilityGroup: function(removeRef){
+        if(this.record && this.record.get('MVFOwnerRef') === removeRef) {
+            this.setOwner(null);
+        }
+
+        var capabilityGroupToRemove = this.capabilityGroupStore.getById(Rally.util.Ref.getOidFromRef(removeRef));
+
+        var refs = this.parseCapabilityGroups();
+
+        refs = Ext.Array.filter(refs, function(ref){
+            return ref.ref !== removeRef;
+        });
+
+        this.saveCapabilityGroups(refs, function(){
+
+            this._removeUserStory({
+                Name: this._userStoryNameFor(capabilityGroupToRemove),
+                PortfolioItem: this.record.get('_ref')
+            }, function() {
+                this.mvfTree.redrawTree(this.record);
+                this._enableOrDisablePullStoriesButton();
+                this.setLoading(false);
+            }, this);
+
+        }, this);
+        this.drawCapabilityGroups();
+
+    },
+
+    updateTitle: function() {
+        Ext.ComponentQuery.query('#titleText')[0].getEl().setHTML(this.record.get('FormattedID') + ' : ' + this.record.get('Name'));
+    },
+
+    setOwner: function(owner) {
+        this.record.set('MVFOwner', owner && owner.name || '');
+        this.record.set('MVFOwnerRef', owner && owner.ref || '');
+        this.record.save({
+            callback: this._enableOrDisablePullStoriesButton,
+            scope: this
+        });
+    },
+
+    _onMVFOwnerChange: function(capabilityGroup) {
+        this.setOwner(capabilityGroup);
+    },
+
+    drawCapabilityGroups: function() {
+
+        var capabilityGroups = this.parseCapabilityGroups();
         var mvfOwnerRef = this.record.get('MVFOwnerRef');
 
-        Ext.Array.each(capabilityGroups, function(capabilityGroup){
-            var container = capabilityGroupsComponent.add({
-                xtype: 'container',
-                cls: 'capabilityGroup',
-                items: [
-                    {
-                        xtype: 'checkbox',
-                        cls: 'ownerCheckbox',
-                        boxLabel: capabilityGroup.name,
-                        boxLabelAttrTpl: 'style="position: relative; top: 2px;"',
-                        checked: mvfOwnerRef === capabilityGroup.ref,
-                        value: mvfOwnerRef === capabilityGroup.ref,
-                        data: capabilityGroup.ref,
-                        listeners: {
-                            change: function(checkbox, value) {
-                                this._onCheckboxChange(capabilityGroup, value);
-                            },
-                            scope: this
-                        }
-                    },
-                    {
-                        xtype: 'rallybutton',
-                        ui: 'link',
-                        cls: 'deleteCapabilityGroup',
-                        html: 'X',
-                        tooltip: 'Remove',
-                        tooltipType: 'title',
-                        listeners: {
-                            click: function() {
-                                this.removeCapabilityGroup(capabilityGroup.ref);
-                            },
-                            scope: this
-                        }
-                    },
-                    {
-                        xtype: 'component',
-                        itemId: 'ownerText',
-                        cls: 'ownerText',
-                        html: 'Owner'
-                    }
-                ]
-            });
-        }, this);
+        this.capabilityGroupEditor.drawCapabilityGroups(capabilityGroups, mvfOwnerRef);
     },
 
 
     pullFeature: function(){
-        Ext.ComponentQuery.query('#pullButton')[0].disable();
-        Ext.ComponentQuery.query('#pullText')[0].addCls('pullTextVisible');
+        this.mvfTree.showPulling(true);
 
         this.pullChildStories(function(stories){
             this.moveMVFToDev(function(){
                 this.saveAll(stories, function(){
-                    Ext.ComponentQuery.query('#capabilityGroupTree')[0].destroy();
-                    this.drawTree();
+                    this.mvfTree.redrawTree(this.record);
                     this._enableOrDisablePullStoriesButton();
-                    Ext.ComponentQuery.query('#pullText')[0].removeCls('pullTextVisible');
+                    this.mvfTree.showPulling(false);
                 }, this);
             }, this);
         }, this);
@@ -689,9 +506,8 @@ Ext.define('CapabilityGroupManagerApp', {
 
     _enableOrDisablePullStoriesButton: function() {
 
-        var pullButton = Ext.ComponentQuery.query('#pullButton')[0];
-
         var mvfOwnerRef = this.record.get('MVFOwnerRef');
+
         if(!mvfOwnerRef || (mvfOwnerRef && this.record.get('Project')._ref === mvfOwnerRef)) {
             Rally.data.ModelFactory.getModel({
                 type: 'Userstory',
@@ -728,11 +544,9 @@ Ext.define('CapabilityGroupManagerApp', {
                                 },this);
 
                                 if(allChildrenInCapabilityGroupProject) {
-                                    pullButton.setText('No changes');
-                                    pullButton.disable();
+                                    this.mvfTree.disablePull();
                                 } else {
-                                    pullButton.setText('Pull stories from MVF');
-                                    pullButton.enable();
+                                    this.mvfTree.enablePull();
                                 }
 
                             },
@@ -743,8 +557,7 @@ Ext.define('CapabilityGroupManagerApp', {
                 scope: this
             });
         } else {
-            pullButton.setText('Pull stories from MVF');
-            pullButton.enable();
+            this.mvfTree.enablePull();
         }
         
     }
