@@ -8,6 +8,7 @@ Ext.define('MVFTree', {
             itemId: 'pullButton',
             cls: 'pullButton',
             disabled: true,
+            width: 130,
             text: 'Pull stories from MVF'
         },
         {
@@ -15,6 +16,12 @@ Ext.define('MVFTree', {
             itemId: 'pullText',
             cls: 'pullText',
             html: 'Moving stories to the right project...'
+        },
+        {
+        	xtype: 'component',
+        	itemId: 'changeOwnerText',
+        	cls: 'changeOwnerText',
+        	html: ''
         }
 	],
 
@@ -26,6 +33,15 @@ Ext.define('MVFTree', {
 
 	_onPullButtonClicked: function() {
 		this.fireEvent('pullButtonClicked');
+	},
+
+	setOwnerText: function(msg) {
+		Ext.ComponentQuery.query('#changeOwnerText')[0].addCls('changeOwnerTextVisible');
+		Ext.ComponentQuery.query('#changeOwnerText')[0].getEl().setHTML(msg);
+	},
+
+	hideOwnerText: function() {
+		Ext.ComponentQuery.query('#changeOwnerText')[0].removeCls('changeOwnerTextVisible');
 	},
 
 	enablePull: function(){

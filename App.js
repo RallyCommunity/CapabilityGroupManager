@@ -84,7 +84,7 @@ Ext.define('CapabilityGroupManagerApp', {
     _loadNeededData: function() {
 
         // TODO - remove this:
-        this.loadDummyRecordForTesting();
+        // this.loadDummyRecordForTesting();
 
         Ext.create('Rally.data.WsapiDataStore', {
             autoLoad: true,
@@ -271,7 +271,7 @@ Ext.define('CapabilityGroupManagerApp', {
 
     removeCapabilityGroup: function(removeRef){
         if(this.record && this.record.get('MVFOwnerRef') === removeRef) {
-            this.setOwner(null);
+            this.setOwner(null, true);
         }
 
         var capabilityGroupToRemove = this.capabilityGroupStore.getById(Rally.util.Ref.getOidFromRef(removeRef));
@@ -302,13 +302,19 @@ Ext.define('CapabilityGroupManagerApp', {
         Ext.ComponentQuery.query('#titleText')[0].getEl().setHTML(this.record.get('FormattedID') + ' : ' + this.record.get('Name'));
     },
 
-    setOwner: function(owner) {
+    setOwner: function(owner, dontSave) {
+        this.setLoading(true);
         this.record.set('MVFOwner', owner && owner.name || '');
         this.record.set('MVFOwnerRef', owner && owner.ref || '');
-        this.record.save({
-            callback: this._enableOrDisablePullStoriesButton,
-            scope: this
-        });
+        if(!dontSave) {
+            this.record.save({
+                callback: function(){
+                    this.setLoading(false);
+                    this._enableOrDisablePullStoriesButton();
+                },
+                scope: this
+            });
+        }
     },
 
     _onMVFOwnerChange: function(capabilityGroup) {
@@ -528,7 +534,6 @@ Ext.define('CapabilityGroupManagerApp', {
                         },
                         listeners: {
                             load: function(store, records) {
-                                records = Ext.Array.clone(records);
                                 capabilityGroups = this.parseCapabilityGroups();
 
                                 var allChildrenInCapabilityGroupProject = true;
@@ -558,6 +563,18 @@ Ext.define('CapabilityGroupManagerApp', {
             });
         } else {
             this.mvfTree.enablePull();
+        }
+
+        if(!mvfOwnerRef) {
+            if(this.parseCapabilityGroups().length > 0) {
+                this.mvfTree.setOwnerText('Please select an owner');    
+            } else {
+                this.mvfTree.hideOwnerText();
+            }
+        } else if (mvfOwnerRef !== this.record.get('Project')._ref) {
+            this.mvfTree.setOwnerText("Click 'Pull' to move the MVF into the new owner's project");
+        } else {
+            this.mvfTree.hideOwnerText();
         }
         
     }

@@ -9,7 +9,6 @@ Ext.define('GettyTreeItem', {
 	    return Ext.create('Ext.XTemplate',
 	            '<div class="pill {[this.getSelectableCls()]}">',
 	            '<tpl if="this.canDrag()"><div class="icon drag"></div></tpl>',
-	            '{[this.getActionsGear()]}',
 	            '<div class="textContent ellipses">{[this.getFormattedId()]} {[this.getType(values)]}{[this.getSeparator()]}{Name}</div>',
 	            '<div class="rightSide">',
 	            '{[this.getProject(values)]}',
@@ -22,9 +21,6 @@ Ext.define('GettyTreeItem', {
 	                },
 	                canDrag: function(){
 	                    return me.getCanDrag();
-	                },
-	                getActionsGear: function(){
-	                    return '<div class="row-action icon"></div>';
 	                },
 	                getFormattedId: function(){
 	                    return me.getRecord().getField('FormattedID')? me.getRecord().render('FormattedID'): '';
