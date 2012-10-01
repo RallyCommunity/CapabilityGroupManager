@@ -3,7 +3,7 @@ Ext.define('CapabilityGroupManagerApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    orderIndexForPulledFeatures: 3, // FIXME - ask Jeff
+    ordinalValueForPulledFeatures: 2,
 
     customFields: {
         Names: 'CapabilityGroups',
@@ -433,7 +433,7 @@ Ext.define('CapabilityGroupManagerApp', {
                     },
                     {
                         property: 'OrderIndex',
-                        value: this.orderIndexForPulledFeatures
+                        value: this.ordinalValueForPulledFeatures
                     }
                 ],
                 listeners: {
