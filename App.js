@@ -3,7 +3,7 @@ Ext.define('CapabilityGroupManagerApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    ordinalValueForPulledFeatures: 2,
+    ordinalValueForPulledFeatures: 4,
 
     customFields: {
         Names: 'CapabilityGroups',
