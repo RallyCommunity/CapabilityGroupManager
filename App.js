@@ -257,7 +257,8 @@ Ext.define('CapabilityGroupManagerApp', {
             this._createUserStory({
                 Name: this._userStoryNameFor(record),
                 PortfolioItem: this.record.get('_ref'),
-                Project: this.record.get('Project')._ref
+                Project: this.record.get('Project')._ref,
+                ScheduleState: 'Defined'
             }, function() {
                 this.mvfTree.redrawTree(this.record);
                 this._enableOrDisablePullStoriesButton();

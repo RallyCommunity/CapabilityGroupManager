@@ -12,7 +12,7 @@
                 extend: 'Rally.app.App',
                 componentCls: 'app',
             
-                orderIndexForPulledFeatures: 3, // FIXME - ask Jeff
+                ordinalValueForPulledFeatures: 2,
             
                 customFields: {
                     Names: 'CapabilityGroups',
@@ -266,7 +266,8 @@
                         this._createUserStory({
                             Name: this._userStoryNameFor(record),
                             PortfolioItem: this.record.get('_ref'),
-                            Project: this.record.get('Project')._ref
+                            Project: this.record.get('Project')._ref,
+                            ScheduleState: 'Defined'
                         }, function() {
                             this.mvfTree.redrawTree(this.record);
                             this._enableOrDisablePullStoriesButton();
@@ -442,7 +443,7 @@
                                 },
                                 {
                                     property: 'OrderIndex',
-                                    value: this.orderIndexForPulledFeatures
+                                    value: this.ordinalValueForPulledFeatures
                                 }
                             ],
                             listeners: {
