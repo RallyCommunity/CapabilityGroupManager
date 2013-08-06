@@ -3,7 +3,7 @@ Ext.define('CapabilityGroupManagerApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    ordinalValueForPulledFeatures: 4,
+    ordinalValueForPulledFeatures: 6,
 
     customFields: {
         Names: 'CapabilityGroups',
@@ -20,7 +20,7 @@ Ext.define('CapabilityGroupManagerApp', {
             autoEl: 'h1',
             cls: 'titleText',
             itemId: 'titleText',
-            html: 'Please select a MVF from a kanban or grid and it will show here'
+            html: 'Please select a Feature from a kanban or grid and it will show here'
         }
     ],
 
@@ -89,11 +89,17 @@ Ext.define('CapabilityGroupManagerApp', {
         Ext.create('Rally.data.WsapiDataStore', {
             autoLoad: true,
             model: 'Project',
+            fetch: ['Name', '_ref', 'ObjectID'],
             filters: [
                 {
                     property: 'Name',
                     operator: 'Contains',
                     value: 'MVF Backlog'
+                },
+                {
+                    property: 'State',
+                    operator: '=',
+                    value: 'Open'
                 }
             ],
             listeners: {
@@ -573,7 +579,7 @@ Ext.define('CapabilityGroupManagerApp', {
                 this.mvfTree.hideOwnerText();
             }
         } else if (mvfOwnerRef !== this.record.get('Project')._ref) {
-            this.mvfTree.setOwnerText("Click 'Pull' to move the MVF into the new owner's project");
+            this.mvfTree.setOwnerText("Click 'Pull' to move the Feature into the new owner's project");
         } else {
             this.mvfTree.hideOwnerText();
         }

@@ -11,6 +11,7 @@ Ext.define('CapabilityGroupCombobox', {
             storeConfig: {
                 autoLoad: true,
                 model: 'Project',
+                fetch: ['Name', '_ref', 'ObjectID'],
                 sorters: {
                     property: 'Name',
                     direction: 'ASC'
@@ -20,6 +21,11 @@ Ext.define('CapabilityGroupCombobox', {
                         property: 'Name',
                         operator: 'Contains',
                         value: 'MVF Backlog'
+                    },
+                    {
+                        property: 'State',
+                        operator: '=',
+                        value: 'Open'
                     }
                 ]
             }

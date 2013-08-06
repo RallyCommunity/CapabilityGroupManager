@@ -12,7 +12,7 @@
                 extend: 'Rally.app.App',
                 componentCls: 'app',
             
-                ordinalValueForPulledFeatures: 4,
+                ordinalValueForPulledFeatures: 6,
             
                 customFields: {
                     Names: 'CapabilityGroups',
@@ -29,7 +29,7 @@
                         autoEl: 'h1',
                         cls: 'titleText',
                         itemId: 'titleText',
-                        html: 'Please select a MVF from a kanban or grid and it will show here'
+                        html: 'Please select a Feature from a kanban or grid and it will show here'
                     }
                 ],
             
@@ -98,11 +98,17 @@
                     Ext.create('Rally.data.WsapiDataStore', {
                         autoLoad: true,
                         model: 'Project',
+                        fetch: ['Name', '_ref', 'ObjectID'],
                         filters: [
                             {
                                 property: 'Name',
                                 operator: 'Contains',
                                 value: 'MVF Backlog'
+                            },
+                            {
+                                property: 'State',
+                                operator: '=',
+                                value: 'Open'
                             }
                         ],
                         listeners: {
@@ -582,7 +588,7 @@
                             this.mvfTree.hideOwnerText();
                         }
                     } else if (mvfOwnerRef !== this.record.get('Project')._ref) {
-                        this.mvfTree.setOwnerText("Click 'Pull' to move the MVF into the new owner's project");
+                        this.mvfTree.setOwnerText("Click 'Pull' to move the Feature into the new owner's project");
                     } else {
                         this.mvfTree.hideOwnerText();
                     }
@@ -623,6 +629,7 @@
                         storeConfig: {
                             autoLoad: true,
                             model: 'Project',
+                            fetch: ['Name', '_ref', 'ObjectID'],
                             sorters: {
                                 property: 'Name',
                                 direction: 'ASC'
@@ -632,6 +639,11 @@
                                     property: 'Name',
                                     operator: 'Contains',
                                     value: 'MVF Backlog'
+                                },
+                                {
+                                    property: 'State',
+                                    operator: '=',
+                                    value: 'Open'
                                 }
                             ]
                         }
@@ -833,8 +845,8 @@
                         itemId: 'pullButton',
                         cls: 'pullButton',
                         disabled: true,
-                        width: 130,
-                        text: 'Pull stories from MVF'
+                        width: 140,
+                        text: 'Pull stories from Feature'
                     },
                     {
                         xtype: 'component',
@@ -870,7 +882,7 @@
             	},
             
             	enablePull: function(){
-                    this.pullButton.setText('Pull stories from MVF');
+                    this.pullButton.setText('Pull stories from Feature');
                     this.pullButton.enable();
             	},
             

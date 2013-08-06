@@ -8,8 +8,8 @@ Ext.define('MVFTree', {
             itemId: 'pullButton',
             cls: 'pullButton',
             disabled: true,
-            width: 130,
-            text: 'Pull stories from MVF'
+            width: 140,
+            text: 'Pull stories from Feature'
         },
         {
             xtype: 'component',
@@ -45,7 +45,7 @@ Ext.define('MVFTree', {
 	},
 
 	enablePull: function(){
-        this.pullButton.setText('Pull stories from MVF');
+        this.pullButton.setText('Pull stories from Feature');
         this.pullButton.enable();
 	},
 
